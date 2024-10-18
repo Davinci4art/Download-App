@@ -1,0 +1,40 @@
+from flask import Flask, request, render_template, send_file
+import requests
+from bs4 import BeautifulSoup
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return '''
+        <form method="POST" action="/download">
+            <label>Enter URL:</label>
+            <input type="text" name="url">
+            <button type="submit">Download</button>
+        </form>
+    '''
+
+@app.route('/download', methods=['POST'])
+def download():
+    url = request.form['url']
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Extract media file (adjust tag/attributes as necessary)
+    video_tag = soup.find('video')
+    if video_tag and 'src' in video_tag.attrs:
+        video_url = video_tag['src']
+        video_response = requests.get(video_url)
+
+        # Save the file
+        file_name = 'downloaded_video.mp4'
+        with open(file_name, 'wb') as f:
+            f.write(video_response.content)
+        
+        return send_file(file_name, as_attachment=True)
+
+    return "Media file not found!"
+
+if __name__ == '__main__':
+    app.run(debug=True)
